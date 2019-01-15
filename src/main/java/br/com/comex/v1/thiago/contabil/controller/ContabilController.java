@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,9 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+@RequestMapping("/lancamentos-contabeis")
 public class ContabilController {
 
-	@PostMapping("/lancamentos-contabeis")
+	@PostMapping
 	public ResponseEntity<LancamentoResponse> lancamentosContabeis(@Valid @RequestBody Lancamento lancamento) {
 
 		UUID id = ContabilService.add(lancamento);
@@ -35,7 +37,7 @@ public class ContabilController {
 		return new ResponseEntity<>(lancamentoResponse, HttpStatus.CREATED);
 	}
 
-	@GetMapping("/lancamentos-contabeis/{uuid}")
+	@GetMapping("/{uuid}")
 	public ResponseEntity<Lancamento> lancamentoPorId(@NotNull @PathVariable("uuid") UUID id) {
 		log.info("Busca de lançamento contábil por id {}",id.toString());
 		Lancamento lancamento = ContabilService.findById(id);
@@ -46,12 +48,12 @@ public class ContabilController {
 		return ResponseEntity.ok(lancamento);
 	}
 
-	@GetMapping("/lancamentos-contabeis/")
+	@GetMapping
 	public ResponseEntity<List<Lancamento>> lancamentosPorContaContabil(@RequestParam(value="contaContabil",required=true) Long contaContabil) {
 		return ResponseEntity.ok(ContabilService.findByContaContabil(contaContabil));
 	}
 
-	@GetMapping("/lancamentos-contabeis/_stats")
+	@GetMapping("/_stats")
 	public ResponseEntity<StatsDTO> stats(@RequestParam(value="contaContabil",required=false) Long contaContabil) {
 		StatsDTO statsDTO = (contaContabil!=null) ? ContabilService.statsByContaContabil(contaContabil) : ContabilService.stats();
 		return ResponseEntity.ok(statsDTO);
