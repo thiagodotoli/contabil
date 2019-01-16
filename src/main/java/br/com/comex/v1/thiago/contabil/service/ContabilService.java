@@ -1,9 +1,6 @@
 package br.com.comex.v1.thiago.contabil.service;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,93 +12,70 @@ import java.util.stream.Collectors;
 
 import javax.validation.constraints.NotNull;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import br.com.comex.v1.thiago.contabil.dto.LancamentoResponse;
 import br.com.comex.v1.thiago.contabil.dto.StatsDTO;
 import br.com.comex.v1.thiago.contabil.exception.LancamentoException;
 import br.com.comex.v1.thiago.contabil.exception.NotFoundException;
 import br.com.comex.v1.thiago.contabil.model.Lancamento;
+import br.com.comex.v1.thiago.contabil.repository.ContabilRepository;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class ContabilService {
 
-	private static Map<UUID,Lancamento> DB_LANCAMENTO = new HashMap<UUID,Lancamento>();
-
-	public static UUID add(Lancamento lancamento) {
+	@Autowired
+	private ContabilRepository contabilRepository;
+	
+	public LancamentoResponse add(Lancamento lancamento) {
 		log.info("DbContabil - Validando data");
 		Matcher matcher = Pattern.compile("([12]\\d{3}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01]))").matcher(lancamento.getData().toString());
 		
-		
 		if(!matcher.matches())
 			throw new LancamentoException("Formato da data inválido");
-			
+		
 		UUID id = UUID.randomUUID();
 		log.info("DbContabil - Adicionando lançamento com UUID: {}",id.toString());
-		DB_LANCAMENTO.put(id, lancamento);
+		lancamento.setId(id.toString());
+		contabilRepository.save(lancamento);  
 		
 		log.info("DbContabil - Processo finalizado");
-		return id;
+		return new LancamentoResponse(id);
 	}
 	
-	public static Lancamento findById(UUID id) {
-		return DB_LANCAMENTO.get(id);
+	public Lancamento findById(UUID id) {
+		return contabilRepository.findById(id.toString()).get();
+	
 	}
 	
-	public static List<Lancamento> findByContaContabil(Long contaContabil) {
-		Collection<Lancamento> lancamentos = DB_LANCAMENTO.values();
+	public List<Lancamento> findByContaContabil(Long contaContabil) {
+		Collection<Lancamento> lancamentos = contabilRepository.findByContaContabil(contaContabil);
 
 		return lancamentos.stream().filter(p -> p.getContaContabil()==contaContabil).collect(Collectors.toList());
 	}
 
-	public static StatsDTO stats() {
+	public StatsDTO stats(Long contaContabil) {
 		StatsDTO satsDTO = new StatsDTO();
+		
+		Collection<Lancamento> lancamentos = null;
+		if(contaContabil==null)
+			lancamentos = contabilRepository.findAll();
+		else
+			lancamentos = contabilRepository.findByContaContabil(contaContabil);
 
-		if(DB_LANCAMENTO.values()==null || DB_LANCAMENTO.values().size()==0)
+		if(lancamentos==null || lancamentos.size()==0)
 			return satsDTO;
 
-		satsDTO.setSoma(DB_LANCAMENTO.values().stream().mapToDouble(i -> i.getValor()).sum());
-		satsDTO.setMax(DB_LANCAMENTO.values().stream().mapToDouble(i -> i.getValor()).max().getAsDouble());
-		satsDTO.setMin(DB_LANCAMENTO.values().stream().mapToDouble(i -> i.getValor()).min().getAsDouble());
-		satsDTO.setMedia(DB_LANCAMENTO.values().stream().mapToDouble(i -> i.getValor()).average().getAsDouble());
-		satsDTO.setQtde((int) DB_LANCAMENTO.values().stream().count());
+		satsDTO.setSoma(lancamentos.stream().mapToDouble(i -> i.getValor()).sum());
+		satsDTO.setMax(lancamentos.stream().mapToDouble(i -> i.getValor()).max().getAsDouble());
+		satsDTO.setMin(lancamentos.stream().mapToDouble(i -> i.getValor()).min().getAsDouble());
+		satsDTO.setMedia(lancamentos.stream().mapToDouble(i -> i.getValor()).average().getAsDouble());
+		satsDTO.setQtde(lancamentos.size());
 
 		return satsDTO;
 	}
 
-	public static StatsDTO statsByContaContabil(@NotNull Long contaContabil) {
-		StatsDTO satsDTO = new StatsDTO();
-
-		if(DB_LANCAMENTO.values()==null || DB_LANCAMENTO.values().size()==0)
-			return satsDTO;
-			
-		try {
-			satsDTO.setSoma(DB_LANCAMENTO.values().stream().filter(p->p.getContaContabil()==contaContabil).mapToDouble(i -> i.getValor()).sum());
-			satsDTO.setMax(DB_LANCAMENTO.values().stream().filter(p->p.getContaContabil()==contaContabil).mapToDouble(i -> i.getValor()).max().getAsDouble());
-			satsDTO.setMin(DB_LANCAMENTO.values().stream().filter(p->p.getContaContabil()==contaContabil).mapToDouble(i -> i.getValor()).min().getAsDouble());
-			satsDTO.setMedia(DB_LANCAMENTO.values().stream().filter(p->p.getContaContabil()==contaContabil).mapToDouble(i -> i.getValor()).average().getAsDouble());
-			satsDTO.setQtde((int) DB_LANCAMENTO.values().stream().filter(p->p.getContaContabil()==contaContabil).count());
-		} catch (NoSuchElementException e) {
-			throw new NotFoundException("Conta contábil não existe");
-		}
-			
-		return satsDTO;
-	}
-
-
-	private static void validFormat(Long value) {
-        Date date = null;
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-            date = sdf.parse(value.toString());
-            if (!value.equals(sdf.format(date))) {
-                date = null;
-            }
-        } catch (ParseException ex) {
-            throw new LancamentoException("O formato da data deve ser YYYYMMDD",ex);
-        }
-        if(date == null)
-        	throw new LancamentoException("O formato da data deve ser YYYYMMDD");
-    }
 }
