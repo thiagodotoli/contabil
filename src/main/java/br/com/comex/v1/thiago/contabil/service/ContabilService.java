@@ -1,16 +1,11 @@
 package br.com.comex.v1.thiago.contabil.service;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import javax.validation.constraints.NotNull;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,7 +13,6 @@ import org.springframework.stereotype.Service;
 import br.com.comex.v1.thiago.contabil.dto.LancamentoResponse;
 import br.com.comex.v1.thiago.contabil.dto.StatsDTO;
 import br.com.comex.v1.thiago.contabil.exception.LancamentoException;
-import br.com.comex.v1.thiago.contabil.exception.NotFoundException;
 import br.com.comex.v1.thiago.contabil.model.Lancamento;
 import br.com.comex.v1.thiago.contabil.repository.ContabilRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -31,18 +25,23 @@ public class ContabilService {
 	private ContabilRepository contabilRepository;
 	
 	public LancamentoResponse add(Lancamento lancamento) {
-		log.info("DbContabil - Validando data");
+		log.info("Validando data");
 		Matcher matcher = Pattern.compile("([12]\\d{3}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01]))").matcher(lancamento.getData().toString());
 		
 		if(!matcher.matches())
 			throw new LancamentoException("Formato da data inválido");
 		
 		UUID id = UUID.randomUUID();
-		log.info("DbContabil - Adicionando lançamento com UUID: {}",id.toString());
-		lancamento.setId(id.toString());
-		contabilRepository.save(lancamento);  
-		
-		log.info("DbContabil - Processo finalizado");
+		try {
+			log.info("Adicionando lançamento com UUID: {}",id.toString());
+			
+			lancamento.setId(id.toString());
+			contabilRepository.save(lancamento);  
+		} catch (Exception e) {
+			log.error(e.getMessage());
+			throw e;
+		}
+		log.info("Processo finalizado");
 		return new LancamentoResponse(id);
 	}
 	

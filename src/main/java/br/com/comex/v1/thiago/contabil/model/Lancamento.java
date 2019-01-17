@@ -34,4 +34,27 @@ public class Lancamento implements Serializable {
 	public String toString() {
 		return ReflectionToStringBuilder.toString(this);
 	}	
+	
+	public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+
+        if (!Lancamento.class.isAssignableFrom(obj.getClass())) {
+            return false;
+        }
+
+        final Lancamento other = (Lancamento) obj;
+        if ((this.id == null) ? (other.id != null) : !this.id.equals(other.id)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 53 * hash + (this.id != null ? this.id.hashCode() : 0);
+        return hash;
+    }	
 }
